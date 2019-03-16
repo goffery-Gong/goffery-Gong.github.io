@@ -42,8 +42,8 @@ public @interface Scheduled {
 
 支持cron表达式（"cron" expression）、固定频率（fixedRate）、固定延时（fixedDelay） 3种调度方式。
 
-initial-delay : 表示第一次运行前需要延迟的时间，单位是毫秒
-fixed-delay : 表示从上一个任务完成到下一个任务开始的间隔, 单位是毫秒。
+initial-delay : 表示第一次运行前需要延迟的时间，单位是毫秒  
+fixed-delay : 表示从上一个任务完成到下一个任务开始的间隔, 单位是毫秒。  
 fixed-rate : 表示从上一个任务开始到下一个任务开始的间隔, 单位是毫秒。(如果上一个任务执行超时，则可能是上一个任务执行完成后立即启动下一个任务)
 cron : cron 表达式。(定时执行，如果上一次任务执行超时而导致某个定时间隔不能执行，则会顺延下一个定时间隔时间。下一个任务和上一个任务的间隔时间不固定)
 区别见图
@@ -121,6 +121,12 @@ public class ScheduledAnnotationBeanPostProcessor
 
    - 采用异步的方式执行调度任务，配置 Spring 的 `@EnableAsync`，在任务执行的方法上标注 `@Async`
    - 配置任务执行池，采用 `ThreadPoolTaskScheduler.setPoolSize(n)`。 `n` 的数量为 `单个任务执行所需时间 / 任务执行的间隔时间`
+
+问题：
+
+创建了`ConcurrentTaskScheduler` 来执行tasks。但是如何将前面的regTasks和这里的executor联系起来的呢？
+
+![img](https://images0.cnblogs.com/i/580631/201405/181453414212066.png)
 
 
 ### 参考文献
