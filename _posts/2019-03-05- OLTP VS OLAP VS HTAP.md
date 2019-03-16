@@ -61,7 +61,7 @@ Data Warehousing是所有决策支持技术的集合，目标是让行政管理�
 
 星型模型和雪花模型名称的来源都是根据模型的样子命名的，星型模型是多个维表围着中间的事实表，比较像星星，雪花模型是看起来比较像雪花。**一般在公司业务实际中使用更多的是星型模型，因为星型模型更加简单。**
 
-前面简介了下OLTP和OLAP的特点，上面的特点决定了OLTP和OLAP在存储模型，查询计划的生成和优化上都是有很大区别。在[畅想TiDB应用场景和HTAP演进之路](https://blog.bcmeng.com/post/tidb-application-htap.html#5-tidb-htap-%E6%BC%94%E8%BF%9B%E4%B9%8B%E8%B7%AF) 一文中，解释了为什么**OLTP系统需要行存，而OLAP系统需要列存**。 正因为OLTP和OLAP在技术实现上的区别较大，所以在较长时间内，现在的数据库要么只满足OLTP需求，要么只满足OLAP需求。 但是这样做有以下缺点：
+前面简介了下OLTP和OLAP的特点，上面的特点决定了OLTP和OLAP在存储模型，查询计划的生成和优化上都是有很大区别。在[畅想TiDB应用场景和HTAP演进之路](https://blog.bcmeng.com/post/tidb-application-htap.html#5-tidb-htap-%E6%BC%94%E8%BF%9B%E4%B9%8B%E8%B7%AF) 一文中，解释了为什么**OLTP系统需要行存，而OLAP系统需要列存**。（见文尾：） 正因为OLTP和OLAP在技术实现上的区别较大，所以在较长时间内，现在的数据库要么只满足OLTP需求，要么只满足OLAP需求。 但是这样做有以下缺点：
 
 1. 数据需要存储多份
 2. 数据从OLTP系统进入OLAP系统会有延迟
@@ -72,6 +72,43 @@ Data Warehousing是所有决策支持技术的集合，目标是让行政管理�
 正因为有以上问题，所以有人提出了HTAP的概念，即一个系统同时很好的满足OLTP和OLAP的需求。 但显然HTAP系统目前还是有很多挑战的，比如OLTP需要行存，OLAP需求列存，怎么同时满足行列两种存储需求？比如如何生成对OLTP和OLAP都最优的查询计划？ 比如如何保证OLTP和OLAP的查询不相互影响，如何进行资源隔离等等。在[畅想TiDB应用场景和HTAP演进之路](https://blog.bcmeng.com/post/tidb-application-htap.html#5-tidb-htap-%E6%BC%94%E8%BF%9B%E4%B9%8B%E8%B7%AF)中简单提了如何在存储上同时满足OLTP和OLAP。
 
 HTAP本质上和最初地一个单机数据库同时满足OLTP和OLAP一样，但问题是在大数据，分布式化的今天，一个系统要同时很好地满足OLTP和OLAP需求显然会难许多，但这些难题或许终将一个一个被解决。
+
+### 行存与列存优缺点与使用场景
+
+####  行存的优缺点和适用场景
+
+![行存的优缺点和适用场景](http://static.zybuluo.com/kangkaisen/mb734poudqs2yangznn3xd6x/%E5%B1%8F%E5%B9%95%E5%BF%AB%E7%85%A7%202018-04-30%20%E4%B8%8B%E5%8D%884.21.55.png)
+
+上图是个行存的示意图，就是数据按行组织，查询时按行读取。行存在学术论文中一般简称为NSM（N-ary Storage Mode）。
+
+行存的优点如下：
+
+- 适合快速的点插入，点更新和点删除
+- 对于需要访问全部列的查询十分友好
+
+行存的缺点如下：
+
+- 对需要读取大量数据并访问部分列的场景不友好
+
+所以行存适用于OLTP场景。
+
+#### 列存的优缺点和适用场景
+
+![列存的优缺点和适用场景](http://static.zybuluo.com/kangkaisen/szh3jebuhv0m9qxvzw7k7hcx/%E5%B1%8F%E5%B9%95%E5%BF%AB%E7%85%A7%202018-04-30%20%E4%B8%8B%E5%8D%884.33.50.png)
+
+上图是个列存的示意图，就是数据按列组织，每列的数据连续存放在一起，查询时按列读取。 列存在学术论文中一般简称为DSM(Decomposition Storage Model)。
+
+列存的优点如下：
+
+- 只读取部分列时，可以减少IO
+- 更好的编码和压缩（由于每列的数据类型相同）
+- 更易于实现向量化执行
+
+列存的缺点如下：
+
+- 不适合随机的插入，删除，更新。（多列之间存在拆分和合并的开销）
+
+所以列存适用于OLAP场景。
 
 **参考资料：**
 
