@@ -48,11 +48,11 @@ fixed-rate : 表示从上一个任务开始到下一个任务开始的间隔, �
 cron : cron 表达式。(定时执行，如果上一次任务执行超时而导致某个定时间隔不能执行，则会顺延下一个定时间隔时间。下一个任务和上一个任务的间隔时间不固定)
 区别见图
 
-![img](https://images2015.cnblogs.com/blog/285763/201707/285763-20170717113617206-969853356.png)
+![img](https://ws2.sinaimg.cn/large/d8b81fbfly1g190j7h6o1j20l40gower.jpg)
 
 ### 2. ScheduledAnnotationBeanPostProcessor
 
-`ScheduledAnnotationBeanPostProcesso`r是[@scheduled](https://github.com/scheduled)注解处理类，实现`BeanPostProcessor`接口（`postProcessAfterInitialization`方法实现注解扫描和类实例创建）、`ApplicationContextAware`接口（`setApplicationContext`方法设置当前`ApplicationContext`）、`org.springframework.context. ApplicationListener`（观察者模式，`onApplicationEvent`方法会被回调）,`DisposableBean`接口（destroy方法中进行资源销毁操作）。
+`ScheduledAnnotationBeanPostProcesso`r是[@scheduled](https://github.com/scheduled)注解处理类，实现了`BeanPostProcessor`接口（`postProcessAfterInitialization`方法实现注解扫描和类实例创建）、`ApplicationContextAware`接口（`setApplicationContext`方法设置当前`ApplicationContext`）、`org.springframework.context. ApplicationListener`（观察者模式，`onApplicationEvent`方法会被回调）,`DisposableBean`接口（destroy方法中进行资源销毁操作）。
 
 `ScheduledAnnotationBeanPostProcessor`中 `postProcessAfterInitialization()`扫描所有[@scheduled](https://github.com/scheduled)注解，区分`cronTasks`、`fixedDelayTasks`、`fixedRateTasks`。
 
@@ -115,18 +115,31 @@ public class ScheduledAnnotationBeanPostProcessor
    }
    ```
 
-3. spring 启动时，`AbstractApplicationContext`中的`finishRefresh`方法触发所有监视者方法回调：`ScheduledAnnotationBeanPostProcessor`类所实现的`ApplicationListener`类中的`onApplicationEvent()`方法。`onApplicationEvent()`调用==`finishRegistration()`==方法完成==`TaskScheduler`==的初始化（最终调用的是`ConcurrentTaskScheduler`）；
+3. spring 启动时，`AbstractApplicationContext`中的`finishRefresh`方法触发所有监视者方法回调：`ScheduledAnnotationBeanPostProcessor`类所实现的`ApplicationListener`类中的`onApplicationEvent()`方法。`onApplicationEvent()`调用`finishRegistration()`方法完成`TaskScheduler`的初始化（最终调用的是`ConcurrentTaskScheduler`）；
 
-4. 默认的 `ConcurrentTaskScheduler` 计划执行器采用`Executors.newSingleThreadScheduledExecutor()` 实现单线程的执行器。因此，对同一个调度任务的执行总是同一个线程。**如果任务的执行时间超过该任务的下一次执行时间，则会出现任务丢失，**跳过该段时间的任务。上述问题有以下解决办法：
+4. 默认的 `ConcurrentTaskScheduler` 计划执行器采用`Executors.newSingleThreadScheduledExecutor()` 实现单线程的执行器。因此，对同一个调度任务的执行总是同一个线程。源码如下
+
+   ```java
+   public static ScheduledExecutorService newSingleThreadScheduledExecutor() {
+       return new DelegatedScheduledExecutorService
+           (new ScheduledThreadPoolExecutor(1));
+   }
+   ```
+
+   ![image](http://wx1.sinaimg.cn/large/d8b81fbfly1g190t9iaulj20bs08maa0.jpg)
+
+5. **如果任务的执行时间超过该任务的下一次执行时间，则会出现任务丢失，**跳过该段时间的任务。上述问题有以下解决办法：
 
    - 采用异步的方式执行调度任务，配置 Spring 的 `@EnableAsync`，在任务执行的方法上标注 `@Async`
    - 配置任务执行池，采用 `ThreadPoolTaskScheduler.setPoolSize(n)`。 `n` 的数量为 `单个任务执行所需时间 / 任务执行的间隔时间`
+
+
 
 问题：
 
 创建了`ConcurrentTaskScheduler` 来执行tasks。但是如何将前面的regTasks和这里的executor联系起来的呢？
 
-![img](https://images0.cnblogs.com/i/580631/201405/181453414212066.png)
+![img](https://ws3.sinaimg.cn/large/d8b81fbfly1g190lunxqnj20pe0cizkn.jpg)
 
 
 ### 参考文献
