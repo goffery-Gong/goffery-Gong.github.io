@@ -219,7 +219,7 @@ class SocketHandler implements Runnable {
 
 原理：NIO由原来的阻塞读写（占用线程）变成了**单线程轮询事件**，找到可以进行读写的网络描述符进行读写。
 
-![img](https://pic1.zhimg.com/80/v2-fc1f1b4368c19a13e064f3ea202ae1a0_hd.jpg)
+![img](https://wx3.sinaimg.cn/large/d8b81fbfly1g1ahakx5htj20dy045gll.jpg)
 
 Acceptor 负责接收客户端 Socket 发起的新建连接请求，并把该 Socket 绑定到一个 Reactor 线程上，于是这个Socket 随后的读写事件都交给此 Reactor 线程来处理。
 
