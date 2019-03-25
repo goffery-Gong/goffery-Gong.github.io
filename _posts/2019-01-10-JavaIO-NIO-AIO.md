@@ -73,6 +73,14 @@ epoll 是把 select/poll 单个的操作拆分为 1 个 epoll*create，多个 ep
 
 所以，当前主流的Server侧Socket实现大都采用了epoll的方式，例如Nginx， 在配置文件可以显式地看到 `use epoll`。
 
+
+
+**（1）系统IO调用 **<https://blog.csdn.net/linxdcn/article/details/72903422>
+
+首先来看一下一般的IO调用。在传统的文件IO操作中，我们都是调用操作系统提供的底层标准IO系统调用函数 read()、write() ，此时调用此函数的进程（在JAVA中即java进程）由当前的**用户态切换到内核态**，然后OS的内核代码负责将相应的文件数据读取到内核的IO缓冲区，然后再把数据从内核IO缓冲区拷贝到进程的私有地址空间中去，这样便完成了一次IO操作。如下图所示。
+
+![img](https://img-blog.csdn.net/20170607224313512?watermark/2/text/aHR0cDovL2Jsb2cuY3Nkbi5uZXQvbGlueGRjbg==/font/5a6L5L2T/fontsize/400/fill/I0JBQkFCMA==/dissolve/70/gravity/SouthEast)
+
 ## Java 的 I/O 类库的基本架构
 
 Java 的 I/O 操作类在包 java.io 下，大概有将近 80 个类，但是这些类大概可以分成四组，分别是：
