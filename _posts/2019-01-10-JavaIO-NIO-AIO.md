@@ -9,7 +9,15 @@ catalog: true
 tags:
     - 网络编程
 ---
-## 基本知识
+在通信编程中，涉及到三个层次的内容：
+
+- 语言层面的IO
+- 操作系统层面IO
+- IO操作在计算机网络的实现
+
+在下文，我们首先介绍关于IO的基础知识（数据单位；Socket与TCP/UDP；Socket与操作系统）；之后我们从宏观角度介绍在操作系统层面的五种IO模型和java语言层面的IO架构（主要是传统的IO包）；然后分别介绍操作系统层面的五种IO模型中（BIO，NIO，IO复用）的具体原理。
+
+## 一、基本知识
 
 ### 1.数据单位
 
@@ -29,7 +37,11 @@ UTF-8编码规则：一种变长的编码方式：它可以使用1~4个字节表
 
 <u>在计算机内存中，统一使用Unicode编码，当需要保存到硬盘或者需要传输的时候，就转换为UTF-8编码。</u>
 
-### 2.TCP通信与socket
+### 2.Socket
+
+
+
+### 3.Socket与TCP通信
 
 #### TCP与UDP的socket缓冲区
 
@@ -48,7 +60,7 @@ UTF-8编码规则：一种变长的编码方式：它可以使用1~4个字节表
 - 对于 TCP 来说，如果应用进程一直没有读取，则 Buffer 满了之后，发生的动作是：通知对端 TCP 协议中的窗口关闭，保证 TCP 套接口接收缓冲区不会溢出，保证了 TCP 是可靠传输的，这个便是滑动窗口的实现。因为对方不允许发出超过通告窗口大小的数据，所以如果对方无视窗口大小而发出了超过窗口大小的数据，则接收方 TCP 将丢弃它，这就是 TCP 的流量控制原理。
 - 对于 UDP 来说，当接收方的 Socket 接收缓冲区满时，新来的数据报无法进入接收缓冲区，此数据报就会被丢弃，UDP 是没有流量控制的，快的发送者可以很容易地淹没慢的接收者，导致接收方的 UDP丢弃数据报。
 
-### 3.Socket与Linux操作系统
+### 4.Socket与Linux操作系统
 
 在Linux世界，“一切皆文件”，操作系统把网络读写作为IO操作，就像读写文件那样，对外提供出来的编程接口就是Socket。所以，socket（套接字）是通信的基石，是支持TCP/IP协议网络通信的基本操作单元。socket实质上提供了进程通信的端点。进程通信之前，双方首先必须各自创建一个端点，否则是没有办法建立联系并相互通信的。一个完整的socket有一个本地唯一的socket号，这是由操作系统分配的。
 
@@ -56,32 +68,94 @@ UTF-8编码规则：一种变长的编码方式：它可以使用1~4个字节表
 
 ![img](http://mmbiz.qpic.cn/mmbiz_jpg/DE2dk1Gjczr9boiaSw77Lyqb8xyeXudaluroIexg2oQYBCHmELy630NC2OQDZGNsukYNhNmKrlrSFM8CE09QxEA/640?wx_fmt=jpeg&tp=webp&wxfrom=5&wx_lazy=1&wx_co=1)
 
-在许多操作系统中，Socket描述符和其他I/O描述符是集成在一起的，操作系统把socket描述符实现为一个指针数组，这些指针指向内部数据结构。进一步看，操作系统为每个运行的进程维护一张单独的文件描述符表。当进程打开一个文件时，系统把一个指向此文件内部数据结构的指针写入文件描述符表，并把该表的索引值返回给调用者 。
+在许多操作系统中，Socket描述符和其他I/O描述符是集成在一起的，操作系统把socket描述符实现为一个指针数组，这些指针指向内部数据结构。进一步看，操作系统为每个运行的进程维护一张单独的文件描述符表。当进程打开一个文件时，系统把一个指向此文件内部数据结构的指针写入文件描述符表，并把该表的索引值返回给调用者。
 
 既然Socket和操作系统的IO操作相关，那么各操作系统IO实现上的差异会导致Socket编程上的些许不同。看看我Mac上的Socket.so 会发现和CentOS上的还是些不同的。 
 
-进程进行Socket操作时，也有着多种处理方式，如阻塞式IO，非阻塞式IO，多路复用(select/poll/epoll)，AIO等等。
+进程进行Socket操作时，也有着多种处理方式，如阻塞式IO，非阻塞式IO，多路复用(select/poll/epoll)，AIO等等。下一节将介绍操作系统的五种IO模型。
 
-多路复用往往在提升性能方面有着重要的作用。select系统调用的功能是对多个文件描述符进行监视，当有文件描述符的文件读写操作完成以及发生异常或者超时，该调用会返回这些文件描述符。select 需要遍历所有的文件描述符，就遍历操作而言，复杂度是 O(N)。
+**[ps.系统传统的IO调用过程](https://blog.csdn.net/linxdcn/article/details/72903422) **
 
-epoll相关系统调用是在Linux 2.5 后的某个版本开始引入的。该系统调用针对传统的select/poll不足，设计上作了很大的改动。select/poll 的缺点在于: 
-
-1. 每次调用时要重复地从用户模式读入参数，并重复地扫描文件描述符。
-2. 每次在调用开始时，要把当前进程放入各个文件描述符的等待队列。在调用结束后，又把进程从各个等待队列中删除。
-
-epoll 是把 select/poll 单个的操作拆分为 1 个 epoll*create，多个 epoll*ctrl和一个 wait。此外，操作系统内核针对 epoll 操作添加了一个文件系统，每一个或者多个要监视的文件描述符都有一个对应的inode 节点，主要信息保存在 eventpoll 结构中。而被监视的文件的重要信息则保存在 epitem 结构中，是一对多的关系。由于在执行 epoll*create 和 epoll*ctrl 时，已经把用户模式的信息保存到内核了， 所以之后即便反复地调用 epoll_wait，也不会重复地拷贝参数，不会重复扫描文件描述符，也不反复地把当前进程放入/拿出等待队列。
-
-所以，当前主流的Server侧Socket实现大都采用了epoll的方式，例如Nginx， 在配置文件可以显式地看到 `use epoll`。
-
-
-
-**（1）系统IO调用 **<https://blog.csdn.net/linxdcn/article/details/72903422>
-
-首先来看一下一般的IO调用。在传统的文件IO操作中，我们都是调用操作系统提供的底层标准IO系统调用函数 read()、write() ，此时调用此函数的进程（在JAVA中即java进程）由当前的**用户态切换到内核态**，然后OS的内核代码负责将相应的文件数据读取到内核的IO缓冲区，然后再把数据从内核IO缓冲区拷贝到进程的私有地址空间中去，这样便完成了一次IO操作。如下图所示。
+以下是操作系统一般情况下的IO调用。在传统的文件IO操作中，我们都是调用操作系统提供的底层标准IO系统调用函数 read()、write() ，此时调用此函数的进程（在JAVA中即java进程）由当前的**用户态切换到内核态**，然后OS的内核代码负责将相应的文件数据读取到内核的IO缓冲区，然后再把数据从内核IO缓冲区拷贝到进程的私有地址空间中去，这样便完成了一次IO操作。如下图所示。
 
 ![img](https://img-blog.csdn.net/20170607224313512?watermark/2/text/aHR0cDovL2Jsb2cuY3Nkbi5uZXQvbGlueGRjbg==/font/5a6L5L2T/fontsize/400/fill/I0JBQkFCMA==/dissolve/70/gravity/SouthEast)
 
-## Java 的 I/O 类库的基本架构
+## 二、操作系统的五种IO模型
+
+### JavaIO与操作系统IO的联系
+
+- 在Java中，主要有三种IO模型，分别是**阻塞IO（BIO）、非阻塞IO（NIO）和 异步IO（AIO）**。
+- 在Linux(UNIX)操作系统中，共有五种IO模型，分别是：**阻塞IO模型**、**非阻塞IO模型**、**IO复用模型**、**信号驱动IO模型**以及**异步IO模型**。
+
+**Java中提供的IO有关的API，在文件处理的时候，其实依赖操作系统层面的IO操作实现的。**比如在Linux 2.6以后，Java中NIO和AIO都是通过epoll来实现的，而在Windows上，AIO是通过IOCP来实现的。
+
+可以把Java中的BIO、NIO和AIO理解为是Java语言对操作系统的各种IO模型的封装。程序员在使用这些API的时候，不需要关心操作系统层面的知识，也不需要根据不同操作系统编写不同的代码。只需要使用Java的API就可以了。
+
+一次IO过程：文件从硬盘中拷贝到用户空间中，中间过渡的空间映射成内核空间。
+
+### **阻塞IO模型**
+
+阻塞 I/O 是最简单的 I/O 模型，一般表现为进程或线程等待某个条件，如果条件不满足，则一直等下去。条件满足，则进行下一步操作。
+
+![img](https://user-gold-cdn.xitu.io/2018/9/9/165bde9e5723181b?imageView2/0/w/1280/h/960/format/webp/ignore-error/1)
+
+应用进程通过系统调用 `recvfrom` 接收数据，但由于内核还未准备好数据报，应用进程就会阻塞住，直到内核准备好数据报，`recvfrom` 完成数据报复制工作，应用进程才能结束阻塞状态。
+
+这种钓鱼方式相对来说比较简单，对于钓鱼的人来说，不需要什么特制的鱼竿，拿一根够长的木棍就可以悠闲的开始钓鱼了（实现简单）。缺点就是比较耗费时间，比较适合那种对鱼的需求量小的情况（并发低，时效性要求低）。
+
+### **非阻塞IO模型** 
+
+我们钓鱼的时候，在等待鱼儿咬钩的过程中，我们可以做点别的事情，比如玩一把王者荣耀、看一集《延禧攻略》等等。但是，我们要时不时的去看一下鱼竿，一旦发现有鱼儿上钩了，就把鱼钓上来。
+
+映射到Linux操作系统中，这就是非阻塞的IO模型。应用进程与内核交互，目的未达到之前，不再一味的等着，而是直接返回。然后通过轮询的方式，不停的去问内核数据准备有没有准备好。如果某一次轮询发现数据已经准备好了，那就把数据拷贝到用户空间中。
+
+![img](https://user-gold-cdn.xitu.io/2018/9/9/165bde9e699d0713?imageView2/0/w/1280/h/960/format/webp/ignore-error/1)
+
+应用进程通过 `recvfrom` 调用不停的去和内核交互，直到内核准备好数据。如果没有准备好，内核会返回`error`，应用进程在得到`error`后，过一段时间再发送`recvfrom`请求。在两次发送请求的时间段，进程可以先做别的事情。
+
+### **信号驱动IO模型** 
+
+我们钓鱼的时候，为了避免自己一遍一遍的去查看鱼竿，我们可以给鱼竿安装一个报警器。当有鱼儿咬钩的时候立刻报警。然后我们再收到报警后，去把鱼钓起来。
+
+映射到Linux操作系统中，这就是信号驱动IO。应用进程在读取文件时通知内核，如果某个 socket 的某个事件发生时，请向我发一个信号。在收到信号后，信号对应的处理函数会进行后续处理。
+
+![img](https://user-gold-cdn.xitu.io/2018/9/9/165bde9e6c6552e2?imageView2/0/w/1280/h/960/format/webp/ignore-error/1)
+
+应用进程预先向内核注册一个信号处理函数，然后用户进程返回，并且不阻塞，当内核数据准备就绪时会发送一个信号给进程，用户进程便在信号处理函数中开始把数据拷贝的用户空间中。
+
+### **IO复用模型** 
+
+我们钓鱼的时候，为了保证可以最短的时间钓到最多的鱼，我们同一时间摆放多个鱼竿，同时钓鱼。然后哪个鱼竿有鱼儿咬钩了，我们就把哪个鱼竿上面的鱼钓起来。
+
+映射到Linux操作系统中，这就是IO复用模型。多个进程的IO可以注册到同一个管道上，这个管道会统一和内核进行交互。当管道中的某一个请求需要的数据准备好之后，进程再把对应的数据拷贝到用户空间中。
+
+![img](https://user-gold-cdn.xitu.io/2018/9/9/165bde9e6e6da275?imageView2/0/w/1280/h/960/format/webp/ignore-error/1)
+
+IO多路转接是多了一个`select`函数，多个进程的IO可以注册到同一个`select`上，当用户进程调用该`select`，`select`会监听所有注册好的IO，如果所有被监听的IO需要的数据都没有准备好时，`select`调用进程会阻塞。当任意一个IO所需的数据准备好之后，`select`调用就会返回，然后进程在通过`recvfrom`来进行数据拷贝。
+
+**这里的IO复用模型，并没有向内核注册信号处理函数，所以，他并不是非阻塞的。**进程在发出`select`后，要等到`select`监听的所有IO操作中至少有一个需要的数据准备好，才会有返回，并且也需要再次发送请求去进行文件的拷贝。
+
+### 同步IO模型
+
+我们说阻塞IO模型、非阻塞IO模型、IO复用模型和信号驱动IO模型都是同步的IO模型。原因是因为，无论以上那种模型，真正的数据拷贝过程，都是同步进行的。
+
+**信号驱动难道不是异步的么？** 信号驱动，内核是在数据准备好之后通知进程，然后进程再通过`recvfrom`操作进行数据拷贝。我们可以认为**数据准备阶段是异步的**，但是，**数据拷贝操作是同步的**。所以，整个IO过程也不能认为是异步的。
+
+### **异步IO模型** 
+
+我们钓鱼的时候，采用一种高科技钓鱼竿，即全自动钓鱼竿。可以自动感应鱼上钩，自动收竿，更厉害的可以自动把鱼放进鱼篓里。然后，通知我们鱼已经钓到了，他就继续去钓下一条鱼去了。
+
+映射到Linux操作系统中，这就是异步IO模型。应用进程把IO请求传给内核后，完全由内核去操作文件拷贝。内核完成相关操作后，会发信号告诉应用进程本次IO已经完成。
+
+![img](https://user-gold-cdn.xitu.io/2018/9/9/165bde9e70ade864?imageView2/0/w/1280/h/960/format/webp/ignore-error/1)
+
+用户进程发起`aio_read`操作之后，给内核传递描述符、缓冲区指针、缓冲区大小等，告诉内核当整个操作完成时，如何通知进程，然后就立刻去做其他事情了。当内核收到`aio_read`后，会立刻返回，然后内核开始等待数据准备，数据准备好以后，直接把数据拷贝到用户控件，然后再通知进程本次IO已经完成。
+
+### **5种IO模型对比**
+
+![emma_1](https://awps-assets.meituan.net/mit-x/blog-images-bundle-2016/77752ed5.jpg)
+
+## 三、Java 的 I/O 类库的基本架构
 
 Java 的 I/O 操作类在包 java.io 下，大概有将近 80 个类，但是这些类大概可以分成四组，分别是：
 
@@ -106,7 +180,7 @@ Java 的 I/O 操作类在包 java.io 下，大概有将近 80 个类，但是这
 
 - 流最终写到什么地方必须要指定，要么是写到磁盘要么是写到网络中。其实从上面的类图中我们发现，**写网络实际上也是写文件**，只不过写网络还有一步需要处理：底层操作系统再将数据传送到其它地方而不是本地磁盘。
 
-## BIO介绍
+## 四、BIO介绍
 
 ### 1.分类
 
@@ -161,7 +235,7 @@ IO的输入输出是根据数据进/出**内存**来判断的：进入内存为�
 
 ### 2.常用的BIO流的用法
 
-#### Io体系的基类（InputStream/Reader，OutputStream/Writer）
+见[javaIO](https://cyc2018.github.io/CS-Notes/#/notes/Java%20IO?id=%E4%B8%80%E3%80%81%E6%A6%82%E8%A7%88)
 
 ### 3.传统BIO通信模式
 
@@ -177,7 +251,7 @@ BIO通信（一请求一应答）模型图如下
 
 在 Java 虚拟机中，线程是宝贵的资源，线程的创建和销毁成本很高，除此之外，线程的切换成本也是很高的。尤其在 Linux 这样的操作系统中，线程本质上就是一个进程，创建和销毁线程都是重量级的系统函数。如果并发访问量增加会导致线程数急剧膨胀可能会导致线程堆栈溢出、创建新线程失败等问题，最终导致进程宕机或者僵死，不能对外提供服务。
 
-## 伪异步 IO
+## 五、伪异步 IO
 
 为了解决同步阻塞I/O面临的一个链路需要一个线程处理的问题，后来有人对它的线程模型进行了优化一一后端通过一个线程池来处理多个客户端的请求接入，形成客户端个数M：线程池最大线程数N的比例关系，其中M可以远远大于N.通过线程池可以灵活地调配线程资源，设置线程的最大值，防止由于海量并发接入导致线程耗尽。
 
@@ -251,7 +325,7 @@ class SocketHandler implements Runnable {
 }
 ```
 
-## NIO介绍
+## 六、NIO介绍
 
 我们使用InputStream从输入流中读取数据时，如果没有读取到有效的数据，程序将在此处阻塞该线程的执行。其实传统的输入里和输出流都是阻塞式的进行输入和输出。 不仅如此，传统的输入流、输出流都是通过字节的移动来处理的（即使我们不直接处理字节流，但底层实现还是依赖于字节处理），也就是说，面向流的输入和输出一次只能处理一个字节，因此面向流的输入和输出系统效率通常不高。 
     从JDk1.4开始，java提供了一系列改进的输入和输出处理的新功能，这些功能被统称为新IO(NIO)。新增了许多用于处理输入和输出的类，这些类都被放在java.nio包及其子包下，并且对原io的很多类都以NIO为基础进行了改写。新增了满足NIO的功能。 
@@ -275,81 +349,244 @@ Selectors
 
 Buffer 
 
-## Linux的五种IO模型
+### Java NIO
 
-### JavaIO与操作系统IO的联系
+见[javaNIO](https://cyc2018.github.io/CS-Notes/#/notes/Java%20IO?id=%E4%B8%80%E3%80%81%E6%A6%82%E8%A7%88)
 
-- 在Java中，主要有三种IO模型，分别是**阻塞IO（BIO）、非阻塞IO（NIO）和 异步IO（AIO）**。
+## 七、多路复用IO
 
-- 在Linux(UNIX)操作系统中，共有五种IO模型，分别是：**阻塞IO模型**、**非阻塞IO模型**、**IO复用模型**、**信号驱动IO模型**以及**异步IO模型**。
+select/poll/epoll 都是 I/O 多路复用的具体实现，select 出现的最早，之后是 poll，再是 epoll。
 
-**Java中提供的IO有关的API，在文件处理的时候，其实依赖操作系统层面的IO操作实现的。**比如在Linux 2.6以后，Java中NIO和AIO都是通过epoll来实现的，而在Windows上，AIO是通过IOCP来实现的。
+### [select](https://cyc2018.github.io/CS-Notes/#/notes/Socket?id=select)
 
-可以把Java中的BIO、NIO和AIO理解为是Java语言对操作系统的各种IO模型的封装。程序员在使用这些API的时候，不需要关心操作系统层面的知识，也不需要根据不同操作系统编写不同的代码。只需要使用Java的API就可以了。
+```c
+int select(int n, fd_set *readfds, fd_set *writefds, fd_set *exceptfds, struct timeval *timeout);Copy to clipboardErrorCopied
+```
 
-一次IO过程：文件从硬盘中拷贝到用户空间中，中间过渡的空间映射成内核空间。
+有三种类型的描述符类型：readset、writeset、exceptset，分别对应读、写、异常条件的描述符集合。fd_set 使用数组实现，数组大小使用 FD_SETSIZE 定义。
 
-### **阻塞IO模型**
+timeout 为超时参数，调用 select 会一直阻塞直到有描述符的事件到达或者等待的时间超过 timeout。
 
-阻塞 I/O 是最简单的 I/O 模型，一般表现为进程或线程等待某个条件，如果条件不满足，则一直等下去。条件满足，则进行下一步操作。
+成功调用返回结果大于 0，出错返回结果为 -1，超时返回结果为 0。
 
-![img](https://user-gold-cdn.xitu.io/2018/9/9/165bde9e5723181b?imageView2/0/w/1280/h/960/format/webp/ignore-error/1)
+```c
+fd_set fd_in, fd_out;
+struct timeval tv;
 
-应用进程通过系统调用 `recvfrom` 接收数据，但由于内核还未准备好数据报，应用进程就会阻塞住，直到内核准备好数据报，`recvfrom` 完成数据报复制工作，应用进程才能结束阻塞状态。
+// Reset the sets
+FD_ZERO( &fd_in );
+FD_ZERO( &fd_out );
 
-这种钓鱼方式相对来说比较简单，对于钓鱼的人来说，不需要什么特制的鱼竿，拿一根够长的木棍就可以悠闲的开始钓鱼了（实现简单）。缺点就是比较耗费时间，比较适合那种对鱼的需求量小的情况（并发低，时效性要求低）。
+// Monitor sock1 for input events
+FD_SET( sock1, &fd_in );
 
-### **非阻塞IO模型** 
+// Monitor sock2 for output events
+FD_SET( sock2, &fd_out );
 
-我们钓鱼的时候，在等待鱼儿咬钩的过程中，我们可以做点别的事情，比如玩一把王者荣耀、看一集《延禧攻略》等等。但是，我们要时不时的去看一下鱼竿，一旦发现有鱼儿上钩了，就把鱼钓上来。
+// Find out which socket has the largest numeric value as select requires it
+int largest_sock = sock1 > sock2 ? sock1 : sock2;
 
-映射到Linux操作系统中，这就是非阻塞的IO模型。应用进程与内核交互，目的未达到之前，不再一味的等着，而是直接返回。然后通过轮询的方式，不停的去问内核数据准备有没有准备好。如果某一次轮询发现数据已经准备好了，那就把数据拷贝到用户空间中。
+// Wait up to 10 seconds
+tv.tv_sec = 10;
+tv.tv_usec = 0;
 
-![img](https://user-gold-cdn.xitu.io/2018/9/9/165bde9e699d0713?imageView2/0/w/1280/h/960/format/webp/ignore-error/1)
+// Call the select
+int ret = select( largest_sock + 1, &fd_in, &fd_out, NULL, &tv );
 
-应用进程通过 `recvfrom` 调用不停的去和内核交互，直到内核准备好数据。如果没有准备好，内核会返回`error`，应用进程在得到`error`后，过一段时间再发送`recvfrom`请求。在两次发送请求的时间段，进程可以先做别的事情。
+// Check if select actually succeed
+if ( ret == -1 )
+    // report error and abort
+else if ( ret == 0 )
+    // timeout; no event detected
+else
+{
+    if ( FD_ISSET( sock1, &fd_in ) )
+        // input event on sock1
 
-### **信号驱动IO模型** 
+    if ( FD_ISSET( sock2, &fd_out ) )
+        // output event on sock2
+}Copy to clipboardErrorCopied
+```
 
-我们钓鱼的时候，为了避免自己一遍一遍的去查看鱼竿，我们可以给鱼竿安装一个报警器。当有鱼儿咬钩的时候立刻报警。然后我们再收到报警后，去把鱼钓起来。
+### [poll](https://cyc2018.github.io/CS-Notes/#/notes/Socket?id=poll)
 
-映射到Linux操作系统中，这就是信号驱动IO。应用进程在读取文件时通知内核，如果某个 socket 的某个事件发生时，请向我发一个信号。在收到信号后，信号对应的处理函数会进行后续处理。
+```c
+int poll(struct pollfd *fds, unsigned int nfds, int timeout);Copy to clipboardErrorCopied
+```
 
-![img](https://user-gold-cdn.xitu.io/2018/9/9/165bde9e6c6552e2?imageView2/0/w/1280/h/960/format/webp/ignore-error/1)
+pollfd 使用链表实现。
 
-应用进程预先向内核注册一个信号处理函数，然后用户进程返回，并且不阻塞，当内核数据准备就绪时会发送一个信号给进程，用户进程便在信号处理函数中开始把数据拷贝的用户空间中。
+```c
+// The structure for two events
+struct pollfd fds[2];
 
-### **IO复用模型** 
+// Monitor sock1 for input
+fds[0].fd = sock1;
+fds[0].events = POLLIN;
 
-我们钓鱼的时候，为了保证可以最短的时间钓到最多的鱼，我们同一时间摆放多个鱼竿，同时钓鱼。然后哪个鱼竿有鱼儿咬钩了，我们就把哪个鱼竿上面的鱼钓起来。
+// Monitor sock2 for output
+fds[1].fd = sock2;
+fds[1].events = POLLOUT;
 
-映射到Linux操作系统中，这就是IO复用模型。多个进程的IO可以注册到同一个管道上，这个管道会统一和内核进行交互。当管道中的某一个请求需要的数据准备好之后，进程再把对应的数据拷贝到用户空间中。
+// Wait 10 seconds
+int ret = poll( &fds, 2, 10000 );
+// Check if poll actually succeed
+if ( ret == -1 )
+    // report error and abort
+else if ( ret == 0 )
+    // timeout; no event detected
+else
+{
+    // If we detect the event, zero it out so we can reuse the structure
+    if ( fds[0].revents & POLLIN )
+        fds[0].revents = 0;
+        // input event on sock1
 
-![img](https://user-gold-cdn.xitu.io/2018/9/9/165bde9e6e6da275?imageView2/0/w/1280/h/960/format/webp/ignore-error/1)
+    if ( fds[1].revents & POLLOUT )
+        fds[1].revents = 0;
+        // output event on sock2
+}Copy to clipboardErrorCopied
+```
 
-IO多路转接是多了一个`select`函数，多个进程的IO可以注册到同一个`select`上，当用户进程调用该`select`，`select`会监听所有注册好的IO，如果所有被监听的IO需要的数据都没有准备好时，`select`调用进程会阻塞。当任意一个IO所需的数据准备好之后，`select`调用就会返回，然后进程在通过`recvfrom`来进行数据拷贝。
+### [比较](https://cyc2018.github.io/CS-Notes/#/notes/Socket?id=%e6%af%94%e8%be%83)
 
-**这里的IO复用模型，并没有向内核注册信号处理函数，所以，他并不是非阻塞的。**进程在发出`select`后，要等到`select`监听的所有IO操作中至少有一个需要的数据准备好，才会有返回，并且也需要再次发送请求去进行文件的拷贝。
+#### [1. 功能](https://cyc2018.github.io/CS-Notes/#/notes/Socket?id=_1-%e5%8a%9f%e8%83%bd)
 
-### 同步IO模型
+select 和 poll 的功能基本相同，不过在一些实现细节上有所不同。
 
-我们说阻塞IO模型、非阻塞IO模型、IO复用模型和信号驱动IO模型都是同步的IO模型。原因是因为，无论以上那种模型，真正的数据拷贝过程，都是同步进行的。
+- select 会修改描述符，而 poll 不会；
+- select 的描述符类型使用数组实现，FD_SETSIZE 大小默认为 1024，因此默认只能监听 1024 个描述符。如果要监听更多描述符的话，需要修改 FD_SETSIZE 之后重新编译；而 poll 的描述符类型使用链表实现，没有描述符数量的限制；
+- poll 提供了更多的事件类型，并且对描述符的重复利用上比 select 高。
+- 如果一个线程对某个描述符调用了 select 或者 poll，另一个线程关闭了该描述符，会导致调用结果不确定。
 
-**信号驱动难道不是异步的么？** 信号驱动，内核是在数据准备好之后通知进程，然后进程再通过`recvfrom`操作进行数据拷贝。我们可以认为**数据准备阶段是异步的**，但是，**数据拷贝操作是同步的**。所以，整个IO过程也不能认为是异步的。
+#### [2. 速度](https://cyc2018.github.io/CS-Notes/#/notes/Socket?id=_2-%e9%80%9f%e5%ba%a6)
 
-### **异步IO模型** 
+select 和 poll 速度都比较慢。
 
-我们钓鱼的时候，采用一种高科技钓鱼竿，即全自动钓鱼竿。可以自动感应鱼上钩，自动收竿，更厉害的可以自动把鱼放进鱼篓里。然后，通知我们鱼已经钓到了，他就继续去钓下一条鱼去了。
+- select 和 poll 每次调用都需要将全部描述符从应用进程缓冲区复制到内核缓冲区。
+- select 和 poll 的返回结果中没有声明哪些描述符已经准备好，所以如果返回值大于 0 时，应用进程都需要使用轮询的方式来找到 I/O 完成的描述符。
 
-映射到Linux操作系统中，这就是异步IO模型。应用进程把IO请求传给内核后，完全由内核去操作文件拷贝。内核完成相关操作后，会发信号告诉应用进程本次IO已经完成。
+#### [3. 可移植性](https://cyc2018.github.io/CS-Notes/#/notes/Socket?id=_3-%e5%8f%af%e7%a7%bb%e6%a4%8d%e6%80%a7)
 
-![img](https://user-gold-cdn.xitu.io/2018/9/9/165bde9e70ade864?imageView2/0/w/1280/h/960/format/webp/ignore-error/1)
+几乎所有的系统都支持 select，但是只有比较新的系统支持 poll。
 
-用户进程发起`aio_read`操作之后，给内核传递描述符、缓冲区指针、缓冲区大小等，告诉内核当整个操作完成时，如何通知进程，然后就立刻去做其他事情了。当内核收到`aio_read`后，会立刻返回，然后内核开始等待数据准备，数据准备好以后，直接把数据拷贝到用户控件，然后再通知进程本次IO已经完成。
+### [epoll](https://cyc2018.github.io/CS-Notes/#/notes/Socket?id=epoll)
 
-### **5种IO模型对比**
+```c
+int epoll_create(int size);
+int epoll_ctl(int epfd, int op, int fd, struct epoll_event *event)；
+int epoll_wait(int epfd, struct epoll_event * events, int maxevents, int timeout);Copy to clipboardErrorCopied
+```
 
-![emma_1](https://awps-assets.meituan.net/mit-x/blog-images-bundle-2016/77752ed5.jpg)
+epoll_ctl() 用于向内核注册新的描述符或者是改变某个文件描述符的状态。已注册的描述符在内核中会被维护在一棵红黑树上，通过回调函数内核会将 I/O 准备好的描述符加入到一个链表中管理，进程调用 epoll_wait() 便可以得到事件完成的描述符。
+
+从上面的描述可以看出，epoll 只需要将描述符从进程缓冲区向内核缓冲区拷贝一次，并且进程不需要通过轮询来获得事件完成的描述符。
+
+epoll 仅适用于 Linux OS。
+
+epoll 比 select 和 poll 更加灵活而且没有描述符数量限制。
+
+epoll 对多线程编程更有友好，一个线程调用了 epoll_wait() 另一个线程关闭了同一个描述符也不会产生像 select 和 poll 的不确定情况。
+
+```c
+// Create the epoll descriptor. Only one is needed per app, and is used to monitor all sockets.
+// The function argument is ignored (it was not before, but now it is), so put your favorite number here
+int pollingfd = epoll_create( 0xCAFE );
+
+if ( pollingfd < 0 )
+ // report error
+
+// Initialize the epoll structure in case more members are added in future
+struct epoll_event ev = { 0 };
+
+// Associate the connection class instance with the event. You can associate anything
+// you want, epoll does not use this information. We store a connection class pointer, pConnection1
+ev.data.ptr = pConnection1;
+
+// Monitor for input, and do not automatically rearm the descriptor after the event
+ev.events = EPOLLIN | EPOLLONESHOT;
+// Add the descriptor into the monitoring list. We can do it even if another thread is
+// waiting in epoll_wait - the descriptor will be properly added
+if ( epoll_ctl( epollfd, EPOLL_CTL_ADD, pConnection1->getSocket(), &ev ) != 0 )
+    // report error
+
+// Wait for up to 20 events (assuming we have added maybe 200 sockets before that it may happen)
+struct epoll_event pevents[ 20 ];
+
+// Wait for 10 seconds, and retrieve less than 20 epoll_event and store them into epoll_event array
+int ready = epoll_wait( pollingfd, pevents, 20, 10000 );
+// Check if epoll actually succeed
+if ( ret == -1 )
+    // report error and abort
+else if ( ret == 0 )
+    // timeout; no event detected
+else
+{
+    // Check if any events detected
+    for ( int i = 0; i < ret; i++ )
+    {
+        if ( pevents[i].events & EPOLLIN )
+        {
+            // Get back our connection pointer
+            Connection * c = (Connection*) pevents[i].data.ptr;
+            c->handleReadEvent();
+         }
+    }
+}Copy to clipboardErrorCopied
+```
+
+### [工作模式](https://cyc2018.github.io/CS-Notes/#/notes/Socket?id=%e5%b7%a5%e4%bd%9c%e6%a8%a1%e5%bc%8f)
+
+epoll 的描述符事件有两种触发模式：LT（level trigger）和 ET（edge trigger）。
+
+#### [1. LT 模式](https://cyc2018.github.io/CS-Notes/#/notes/Socket?id=_1-lt-%e6%a8%a1%e5%bc%8f)
+
+当 epoll_wait() 检测到描述符事件到达时，将此事件通知进程，进程可以不立即处理该事件，下次调用 epoll_wait() 会再次通知进程。是默认的一种模式，并且同时支持 Blocking 和 No-Blocking。
+
+#### [2. ET 模式](https://cyc2018.github.io/CS-Notes/#/notes/Socket?id=_2-et-%e6%a8%a1%e5%bc%8f)
+
+和 LT 模式不同的是，通知之后进程必须立即处理事件，下次再调用 epoll_wait() 时不会再得到事件到达的通知。
+
+很大程度上减少了 epoll 事件被重复触发的次数，因此效率要比 LT 模式高。只支持 No-Blocking，以避免由于一个文件句柄的阻塞读/阻塞写操作把处理多个文件描述符的任务饿死。
+
+### [应用场景](https://cyc2018.github.io/CS-Notes/#/notes/Socket?id=%e5%ba%94%e7%94%a8%e5%9c%ba%e6%99%af)
+
+很容易产生一种错觉认为只要用 epoll 就可以了，select 和 poll 都已经过时了，其实它们都有各自的使用场景。
+
+#### [1. select 应用场景](https://cyc2018.github.io/CS-Notes/#/notes/Socket?id=_1-select-%e5%ba%94%e7%94%a8%e5%9c%ba%e6%99%af)
+
+select 的 timeout 参数精度为 1ns，而 poll 和 epoll 为 1ms，因此 select 更加适用于实时性要求比较高的场景，比如核反应堆的控制。
+
+select 可移植性更好，几乎被所有主流平台所支持。
+
+#### [2. poll 应用场景](https://cyc2018.github.io/CS-Notes/#/notes/Socket?id=_2-poll-%e5%ba%94%e7%94%a8%e5%9c%ba%e6%99%af)
+
+poll 没有最大描述符数量的限制，如果平台支持并且对实时性要求不高，应该使用 poll 而不是 select。
+
+#### [3. epoll 应用场景](https://cyc2018.github.io/CS-Notes/#/notes/Socket?id=_3-epoll-%e5%ba%94%e7%94%a8%e5%9c%ba%e6%99%af)
+
+只需要运行在 Linux 平台上，有大量的描述符需要同时轮询，并且这些连接最好是长连接。
+
+需要同时监控小于 1000 个描述符，就没有必要使用 epoll，因为这个应用场景下并不能体现 epoll 的优势。
+
+需要监控的描述符状态变化多，而且都是非常短暂的，也没有必要使用 epoll。因为 epoll 中的所有描述符都存储在内核中，造成每次需要对描述符的状态改变都需要通过 epoll_ctl() 进行系统调用，频繁系统调用降低效率。并且 epoll 的描述符存储在内核，不容易调试。
+
+### 总结
+
+多路复用往往在提升性能方面有着重要的作用。select系统调用的功能是对多个文件描述符进行监视，当有文件描述符的文件读写操作完成以及发生异常或者超时，该调用会返回这些文件描述符。select 需要遍历所有的文件描述符，就遍历操作而言，复杂度是 O(N)。
+
+epoll相关系统调用是在Linux 2.5 后的某个版本开始引入的。该系统调用针对传统的select/poll不足，设计上作了很大的改动。select/poll 的缺点在于: 
+
+1. 每次调用时要重复地从用户模式读入参数，并重复地扫描文件描述符。
+2. 每次在调用开始时，要把当前进程放入各个文件描述符的等待队列。在调用结束后，又把进程从各个等待队列中删除。
+
+epoll 是把 select/poll 单个的操作拆分为 1 个 epoll*create，多个 epoll*ctrl和一个 wait。此外，操作系统内核针对 epoll 操作添加了一个文件系统，每一个或者多个要监视的文件描述符都有一个对应的inode 节点，主要信息保存在 eventpoll 结构中。而被监视的文件的重要信息则保存在 epitem 结构中，是一对多的关系。由于在执行 epoll*create 和 epoll*ctrl 时，已经把用户模式的信息保存到内核了， 所以之后即便反复地调用 epoll_wait，也不会重复地拷贝参数，不会重复扫描文件描述符，也不反复地把当前进程放入/拿出等待队列。
+
+所以，当前主流的Server侧Socket实现大都采用了epoll的方式，例如Nginx， 在配置文件可以显式地看到 `use epoll`。
+
+
+
+
 
 ## 参考
 
