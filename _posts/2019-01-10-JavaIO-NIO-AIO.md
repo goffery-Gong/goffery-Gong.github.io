@@ -39,7 +39,7 @@ UTF-8编码规则：一种变长的编码方式：它可以使用1~4个字节表
 
 ### 2.Socket
 
-
+创建socket的语句时，操作系统会创建一个由文件系统管理的socket对象（如下图）。这个socket对象包含了发送缓冲区、接收缓冲区、等待队列等成员。等待队列是个非常重要的结构，它指向所有需要等待该socket事件的进程。
 
 ### 3.Socket与TCP通信
 
@@ -66,7 +66,7 @@ UTF-8编码规则：一种变长的编码方式：它可以使用1~4个字节表
 
 从设计模式的角度看， Socket其实是一个外观模式，它把复杂的TCP/IP协议栈隐藏在Socket接口后面，对用户来说，一组简单的Socket接口就是全部。当应用程序创建一个socket时，操作系统就返回一个整数作为描述符（descriptor）来标识这个套接字。然后，应用程序以该描述符为传递参数，通过调用函数来完成某种操作（例如通过网络传送数据或接收输入的数据）。以TCP 为例，典型的Socket 使用如下： 
 
-![img](http://mmbiz.qpic.cn/mmbiz_jpg/DE2dk1Gjczr9boiaSw77Lyqb8xyeXudaluroIexg2oQYBCHmELy630NC2OQDZGNsukYNhNmKrlrSFM8CE09QxEA/640?wx_fmt=jpeg&tp=webp&wxfrom=5&wx_lazy=1&wx_co=1)
+![](http://ww2.sinaimg.cn/large/006tNc79ly1g5omrfmeqwj30da0dnjsf.jpg)
 
 在许多操作系统中，Socket描述符和其他I/O描述符是集成在一起的，操作系统把socket描述符实现为一个指针数组，这些指针指向内部数据结构。进一步看，操作系统为每个运行的进程维护一张单独的文件描述符表。当进程打开一个文件时，系统把一个指向此文件内部数据结构的指针写入文件描述符表，并把该表的索引值返回给调用者。
 
@@ -97,7 +97,7 @@ UTF-8编码规则：一种变长的编码方式：它可以使用1~4个字节表
 
 阻塞 I/O 是最简单的 I/O 模型，一般表现为进程或线程等待某个条件，如果条件不满足，则一直等下去。条件满足，则进行下一步操作。
 
-![img](https://user-gold-cdn.xitu.io/2018/9/9/165bde9e5723181b?imageView2/0/w/1280/h/960/format/webp/ignore-error/1)
+![](http://ww2.sinaimg.cn/large/006tNc79ly1g5omsl5dsrj30h909e0tb.jpg)
 
 应用进程通过系统调用 `recvfrom` 接收数据，但由于内核还未准备好数据报，应用进程就会阻塞住，直到内核准备好数据报，`recvfrom` 完成数据报复制工作，应用进程才能结束阻塞状态。
 
@@ -109,7 +109,7 @@ UTF-8编码规则：一种变长的编码方式：它可以使用1~4个字节表
 
 映射到Linux操作系统中，这就是非阻塞的IO模型。应用进程与内核交互，目的未达到之前，不再一味的等着，而是直接返回。然后通过轮询的方式，不停的去问内核数据准备有没有准备好。如果某一次轮询发现数据已经准备好了，那就把数据拷贝到用户空间中。
 
-![img](https://user-gold-cdn.xitu.io/2018/9/9/165bde9e699d0713?imageView2/0/w/1280/h/960/format/webp/ignore-error/1)
+![](http://ww3.sinaimg.cn/large/006tNc79ly1g5omt3r1ygj30ji0aeab4.jpg)
 
 应用进程通过 `recvfrom` 调用不停的去和内核交互，直到内核准备好数据。如果没有准备好，内核会返回`error`，应用进程在得到`error`后，过一段时间再发送`recvfrom`请求。在两次发送请求的时间段，进程可以先做别的事情。
 
@@ -119,7 +119,7 @@ UTF-8编码规则：一种变长的编码方式：它可以使用1~4个字节表
 
 映射到Linux操作系统中，这就是信号驱动IO。应用进程在读取文件时通知内核，如果某个 socket 的某个事件发生时，请向我发一个信号。在收到信号后，信号对应的处理函数会进行后续处理。
 
-![img](https://user-gold-cdn.xitu.io/2018/9/9/165bde9e6c6552e2?imageView2/0/w/1280/h/960/format/webp/ignore-error/1)
+![](http://ww3.sinaimg.cn/large/006tNc79ly1g5omtj989uj30jq0avt9l.jpg)
 
 应用进程预先向内核注册一个信号处理函数，然后用户进程返回，并且不阻塞，当内核数据准备就绪时会发送一个信号给进程，用户进程便在信号处理函数中开始把数据拷贝的用户空间中。
 
@@ -127,9 +127,9 @@ UTF-8编码规则：一种变长的编码方式：它可以使用1~4个字节表
 
 我们钓鱼的时候，为了保证可以最短的时间钓到最多的鱼，我们同一时间摆放多个鱼竿，同时钓鱼。然后哪个鱼竿有鱼儿咬钩了，我们就把哪个鱼竿上面的鱼钓起来。
 
-映射到Linux操作系统中，这就是IO复用模型。多个进程的IO可以注册到同一个管道上，这个管道会统一和内核进行交互。当管道中的某一个请求需要的数据准备好之后，进程再把对应的数据拷贝到用户空间中。
+映射到Linux操作系统中，这就是IO复用模型。多个进程的IO可以注册到同一个管道上，这个管道会统一和内核进行交互。**当管道中的某一个请求需要的数据准备好之后，进程再把对应的数据拷贝到用户空间中。**
 
-![img](https://user-gold-cdn.xitu.io/2018/9/9/165bde9e6e6da275?imageView2/0/w/1280/h/960/format/webp/ignore-error/1)
+![](http://ww1.sinaimg.cn/large/006tNc79ly1g5omultsn1j30jq0adjsc.jpg)
 
 IO多路转接是多了一个`select`函数，多个进程的IO可以注册到同一个`select`上，当用户进程调用该`select`，`select`会监听所有注册好的IO，如果所有被监听的IO需要的数据都没有准备好时，`select`调用进程会阻塞。当任意一个IO所需的数据准备好之后，`select`调用就会返回，然后进程在通过`recvfrom`来进行数据拷贝。
 
@@ -147,7 +147,7 @@ IO多路转接是多了一个`select`函数，多个进程的IO可以注册到�
 
 映射到Linux操作系统中，这就是异步IO模型。应用进程把IO请求传给内核后，完全由内核去操作文件拷贝。内核完成相关操作后，会发信号告诉应用进程本次IO已经完成。
 
-![img](https://user-gold-cdn.xitu.io/2018/9/9/165bde9e70ade864?imageView2/0/w/1280/h/960/format/webp/ignore-error/1)
+![](http://ww3.sinaimg.cn/large/006tNc79ly1g5omuzoz45j30jd0bogma.jpg)
 
 用户进程发起`aio_read`操作之后，给内核传递描述符、缓冲区指针、缓冲区大小等，告诉内核当整个操作完成时，如何通知进程，然后就立刻去做其他事情了。当内核收到`aio_read`后，会立刻返回，然后内核开始等待数据准备，数据准备好以后，直接把数据拷贝到用户控件，然后再通知进程本次IO已经完成。
 
@@ -190,7 +190,7 @@ IO的输入输出是根据数据进/出**内存**来判断的：进入内存为�
 
  对于如图15.2所示的数据流向，数据从[服务器](https://www.baidu.com/s?wd=%E6%9C%8D%E5%8A%A1%E5%99%A8&tn=24004469_oem_dg&rsv_dl=gh_pl_sl_csd)通过网络流向客户端，在这种情况下,Server端的内存负责将数据输出到网络里，因此Server端的程序使用输出流；Client端的内存负责从网络中读取数据，因此Client端的程序应该使用输入流。
 
-   ![è¿æ¯å¾çæè¿°](https://img-blog.csdn.net/20160505173519730)
+   ![](http://ww2.sinaimg.cn/large/006tNc79ly1g5omvwxmd6j30nr041jsy.jpg)
 
 > 注：java的输入流主要是InputStream和Reader作为基类，而输出流则是主要由outputStream和[Writer](https://www.baidu.com/s?wd=Writer&tn=24004469_oem_dg&rsv_dl=gh_pl_sl_csd)作为基类。它们都是一些抽象基类，无法直接创建实例。
 
@@ -206,13 +206,13 @@ IO的输入输出是根据数据进/出**内存**来判断的：进入内存为�
     从图15.3中可以看出，当使用节点流进行输入和输出时，程序直接连接到实际的数据源，和实际的输入/输出节点连接。 
 处理流则用于对一个已存在的流进行连接和封装，通过封装后的流来实现数据的读/写功能。处理流也被称为高级流。图15.4显示了处理流的示意图。
 
-![è¿éåå¾çæè¿°](https://img-blog.csdn.net/20160505135650158)
+![](http://ww2.sinaimg.cn/large/006tNc79ly1g5omvpzw8dj30po04h0ul.jpg)
 
 从图15.4可以看出，当使用处理流进行输入/输出时，程序并不会直接连接到实际的数据源，没有和实际的输入和输出节点连接。使用处理流的一个明显的好处是，只要使用相同的处理流，程序就可以采用完全相同的输入/输出代码来访问不同的数据源，随着处理流所包装的节点流的变化，程序实际所访问的数据源也相应的发生变化。
 
 处理流可以“嫁接”在任何已存在的流的基础之上，这就允许Java应用程序采用相同的代码，透明的方式来访问不同的输入和输出设备的数据流。图15.7显示了处理流的模型。
 
-![è¿éåå¾çæè¿°](https://img-blog.csdn.net/20160505170600458)
+![](http://ww1.sinaimg.cn/large/006tNc79ly1g5omw4ww1aj30r109zq5q.jpg)
 
 #### 常用的流的分类表
 
@@ -241,7 +241,7 @@ IO的输入输出是根据数据进/出**内存**来判断的：进入内存为�
 
 BIO通信（一请求一应答）模型图如下
 
-![ä¼ ç"BIOéä¿¡æ¨¡åå¾](https://camo.githubusercontent.com/5ef6de9824ae82bb0c403522a647953d1193a362/68747470733a2f2f6d792d626c6f672d746f2d7573652e6f73732d636e2d6265696a696e672e616c6979756e63732e636f6d2f322e706e67)
+![](http://ww4.sinaimg.cn/large/006tNc79ly1g5omweglp6j30ig0chmxl.jpg)
 
 采用 **BIO 通信模型** 的服务端，通常由一个独立的 Acceptor 线程负责监听客户端的连接。我们一般通过在`while(true)` 循环中服务端会调用 `accept()` 方法等待接收客户端的连接的方式监听请求，请求一旦接收到一个连接请求，就可以建立通信套接字在这个通信套接字上进行读写操作，此时不能再接收其他客户端连接请求，只能等待同当前连接的客户端的操作执行完成， 不过可以通过多线程来支持多个客户端的连接，如上图所示。
 
@@ -335,7 +335,7 @@ class SocketHandler implements Runnable {
 
 原理：NIO由原来的阻塞读写（占用线程）变成了**单线程轮询事件**，找到可以进行读写的网络描述符进行读写。
 
-![img](https://wx3.sinaimg.cn/large/d8b81fbfly1g1ahakx5htj20dy045gll.jpg)
+![img](http://ww3.sinaimg.cn/large/006tNc79ly1g5omx2sj69j30dy045gll.jpg)
 
 Acceptor 负责接收客户端 Socket 发起的新建连接请求，并把该 Socket 绑定到一个 Reactor 线程上，于是这个Socket 随后的读写事件都交给此 Reactor 线程来处理。
 
@@ -357,7 +357,27 @@ Buffer
 
 select/poll/epoll 都是 I/O 多路复用的具体实现，select 出现的最早，之后是 poll，再是 epoll。
 
+好文强烈推荐：[如果这篇文章说不清epoll的本质，那就过来掐死我吧](https://zhuanlan.zhihu.com/p/64138532)
+
 ### [select](https://cyc2018.github.io/CS-Notes/#/notes/Socket?id=select)
+
+#### select的原理流程
+
+1. 将需要监视的socket保存到一个数组fds中，之后调用select，如果数组fds中的所有sokect都没有数据，则进程阻塞（将进程添加到所有socket下的等待队列中）
+
+   ![img](http://ww2.sinaimg.cn/large/006tNc79ly1g5ouzt6g8vj30dg09s3yy.jpg)
+
+2. 当socket接收到数据时，从select返回，唤醒进程（所谓唤起进程，就是将进程从所有的等待队列中移除，加入到工作队列里面）；
+
+   ![img](http://ww3.sinaimg.cn/large/006tNc79ly1g5ov0ab3kmj30e70bdaao.jpg)
+
+3. 遍历数组，使用FD_ISSET判断具体哪个socket收到了数据，之后处理；
+
+   ![img](http://ww1.sinaimg.cn/large/006tNc79ly1g5ov1fzjgdj30df09rgm9.jpg)
+
+> 补充说明： 本节只解释了select的一种情形。当程序调用select时，内核会先遍历一遍socket，如果有一个以上的socket接收缓冲区有数据，那么select直接返回，不会阻塞。这也是为什么select的返回值有可能大于1的原因之一。如果没有socket有数据，进程才会阻塞。
+
+#### select调用伪代码
 
 ```c
 int select(int n, fd_set *readfds, fd_set *writefds, fd_set *exceptfds, struct timeval *timeout);Copy to clipboardErrorCopied
@@ -390,10 +410,10 @@ int largest_sock = sock1 > sock2 ? sock1 : sock2;
 tv.tv_sec = 10;
 tv.tv_usec = 0;
 
-// Call the select
+// Call the select，如果没有数据则阻塞
 int ret = select( largest_sock + 1, &fd_in, &fd_out, NULL, &tv );
 
-// Check if select actually succeed
+// Check if select actually succeed，调用成功则遍历数组，找出
 if ( ret == -1 )
     // report error and abort
 else if ( ret == 0 )
@@ -407,6 +427,12 @@ else
         // output event on sock2
 }Copy to clipboardErrorCopied
 ```
+
+#### select缺点
+
+其一，每次调用select都需要将进程加入到所有监视socket的等待队列，每次唤醒都需要从每个队列中移除。这里涉及了两次遍历，而且每次都要将整个fds列表传递给内核，有一定的开销。正是因为遍历操作开销大，出于效率的考量，才会规定select的最大监视数量，默认只能监视1024个socket。
+
+其二，进程被唤醒后，程序并不知道哪些socket收到数据，还需要遍历一次。
 
 ### [poll](https://cyc2018.github.io/CS-Notes/#/notes/Socket?id=poll)
 
@@ -448,29 +474,60 @@ else
 }Copy to clipboardErrorCopied
 ```
 
-### [比较](https://cyc2018.github.io/CS-Notes/#/notes/Socket?id=%e6%af%94%e8%be%83)
+### [select与poll比较](https://cyc2018.github.io/CS-Notes/#/notes/Socket?id=%e6%af%94%e8%be%83)
 
 #### [1. 功能](https://cyc2018.github.io/CS-Notes/#/notes/Socket?id=_1-%e5%8a%9f%e8%83%bd)
 
 select 和 poll 的功能基本相同，不过在一些实现细节上有所不同。
 
 - select 会修改描述符，而 poll 不会；
-- select 的描述符类型使用数组实现，FD_SETSIZE 大小默认为 1024，因此默认只能监听 1024 个描述符。如果要监听更多描述符的话，需要修改 FD_SETSIZE 之后重新编译；而 poll 的描述符类型使用链表实现，没有描述符数量的限制；
+- ==select 的描述符类型使用数组实现，FD_SETSIZE 大小默认为 1024，因此默认只能监听 1024 个描述符。==如果要监听更多描述符的话，需要修改 FD_SETSIZE 之后重新编译；==而 poll 的描述符类型使用链表实现，没有描述符数量的限制；==
 - poll 提供了更多的事件类型，并且对描述符的重复利用上比 select 高。
 - 如果一个线程对某个描述符调用了 select 或者 poll，另一个线程关闭了该描述符，会导致调用结果不确定。
 
 #### [2. 速度](https://cyc2018.github.io/CS-Notes/#/notes/Socket?id=_2-%e9%80%9f%e5%ba%a6)
 
-select 和 poll 速度都比较慢。
+**select 和 poll 速度都比较慢**。
 
-- select 和 poll 每次调用都需要将全部描述符从应用进程缓冲区复制到内核缓冲区。
-- select 和 poll 的返回结果中没有声明哪些描述符已经准备好，所以如果返回值大于 0 时，应用进程都需要使用轮询的方式来找到 I/O 完成的描述符。
+- **select 和 poll 每次调用都需要将全部描述符从应用进程缓冲区复制到内核缓冲区**。
+- **select 和 poll 的返回结果中没有声明哪些描述符已经准备好，所以如果返回值大于 0 时，应用进程都需要使用轮询的方式来找到 I/O 完成的描述符**。
 
 #### [3. 可移植性](https://cyc2018.github.io/CS-Notes/#/notes/Socket?id=_3-%e5%8f%af%e7%a7%bb%e6%a4%8d%e6%80%a7)
 
 几乎所有的系统都支持 select，但是只有比较新的系统支持 poll。
 
 ### [epoll](https://cyc2018.github.io/CS-Notes/#/notes/Socket?id=epoll)
+
+#### 1.epoll原理和流程
+
+1. 进程调用`epoll_create`创建eventpoll对象（也就是程序中epfd所代表的对象）
+
+2. 维护监视列表：创建epoll对象后，可以用`epoll_ctl`添加或删除所要监听的socket，内核会将eventpoll添加到**socket的等待队列中**；
+
+   - 监视列表的数据结构：红黑树
+
+3. 当socket收到数据后，中断程序会给eventpoll的“就绪列表”添加socket引用；**中断程序会操作eventpoll对象，而不是直接操作进程**（对比上面select图，加入到socket等待队列中的是进程，而epoll则是eventpoll对象）。
+
+4. 当程序执行到`epoll_wait`时，如果rdlist已经引用了socket，那么epoll_wait直接返回，如果rdlist为空，阻塞进程
+
+   1. 进程阻塞和唤醒进程：假设计算机中正在运行进程A和进程B，在某时刻进程A运行到了epoll_wait语句。如下图所示，内核会将进程A放入eventpoll的等待队列中，阻塞进程
+
+      ![](http://ww1.sinaimg.cn/large/006tNc79ly1g5ovs24n3fj30er0bxq3w.jpg)
+
+   2. 当socket接收到数据，中断程序一方面修改rdlist，另一方面唤醒eventpoll等待队列中的进程，进程A再次进入运行状态（如下图）。也因为rdlist的存在，进程A可以知道哪些socket发生了变化
+
+      ![](http://ww2.sinaimg.cn/large/006tNc79ly1g5ovsiashrj30ev0by3zl.jpg)
+
+#### 2. 实现细节
+
+1. eventpoll对象中就序列表rdlist的数据结构：双向队列
+2. eventpoll对象中，维护监视队列的数据结构（rbr）：红黑树。需要满足快速插入，删除，检索（避免重复）
+
+> ps：因为操作系统要兼顾多种功能，以及由更多需要保存的数据，rdlist并非直接引用socket，而是通过epitem间接引用，红黑树的节点也是epitem对象。同样，文件系统也并非直接引用着socket。为方便理解，本文中省略了一些间接结构。
+
+![](http://ww3.sinaimg.cn/large/006tNc79ly1g5ow80h4foj30ep0cv75b.jpg)
+
+#### 3.epoll调用伪代码
 
 ```c
 int epoll_create(int size);
@@ -535,19 +592,15 @@ else
 }Copy to clipboardErrorCopied
 ```
 
-### [工作模式](https://cyc2018.github.io/CS-Notes/#/notes/Socket?id=%e5%b7%a5%e4%bd%9c%e6%a8%a1%e5%bc%8f)
+### 三种模式对比
 
-epoll 的描述符事件有两种触发模式：LT（level trigger）和 ET（edge trigger）。
+epoll在select和poll（poll和select基本一样，有少量改进）的基础引入了eventpoll作为中间层，使用了先进的数据结构，是一种高效的多路复用技术。
 
-#### [1. LT 模式](https://cyc2018.github.io/CS-Notes/#/notes/Socket?id=_1-lt-%e6%a8%a1%e5%bc%8f)
+**epoll只有在持有很多连接，并且每个连接都不是特别活跃的时候效率才高，其他的情况不见得比select好**
 
-当 epoll_wait() 检测到描述符事件到达时，将此事件通知进程，进程可以不立即处理该事件，下次调用 epoll_wait() 会再次通知进程。是默认的一种模式，并且同时支持 Blocking 和 No-Blocking。
+==epoll只有在持有很多连接，并且每个连接都不是特别活跃的时候效率才高，其他的情况不见得比select好==
 
-#### [2. ET 模式](https://cyc2018.github.io/CS-Notes/#/notes/Socket?id=_2-et-%e6%a8%a1%e5%bc%8f)
-
-和 LT 模式不同的是，通知之后进程必须立即处理事件，下次再调用 epoll_wait() 时不会再得到事件到达的通知。
-
-很大程度上减少了 epoll 事件被重复触发的次数，因此效率要比 LT 模式高。只支持 No-Blocking，以避免由于一个文件句柄的阻塞读/阻塞写操作把处理多个文件描述符的任务饿死。
+![](http://ww2.sinaimg.cn/large/006tNc79ly1g5ow9cexhhj30pv0c1tbv.jpg)
 
 ### [应用场景](https://cyc2018.github.io/CS-Notes/#/notes/Socket?id=%e5%ba%94%e7%94%a8%e5%9c%ba%e6%99%af)
 
