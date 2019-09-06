@@ -60,7 +60,7 @@ cron : cron 表达式。(定时执行，如果上一次任务执行超时而导�
 package org.springframework.scheduling.annotation;
 
 public class ScheduledAnnotationBeanPostProcessor
-		implements MergedBeanDefinitionPostProcessor, DestructionAwareBeanPostProcessor,
+		implements MergedBeanDefinitionPostProcessor, Destruc	tionAwareBeanPostProcessor,
 		Ordered, EmbeddedValueResolverAware, BeanNameAware, BeanFactoryAware, ApplicationContextAware,
 		SmartInitializingSingleton, ApplicationListener<ContextRefreshedEvent>, DisposableBean {
 
@@ -139,7 +139,7 @@ public class ScheduledAnnotationBeanPostProcessor
 
 创建了`ConcurrentTaskScheduler` 来执行tasks。但是如何将前面的regTasks和这里的executor联系起来的呢？
 
-![img](https://ws3.sinaimg.cn/large/d8b81fbfly1g190lunxqnj20pe0cizkn.jpg)
+![img](http://ww3.sinaimg.cn/large/006tNc79ly1g5w3x4nbx0j30pe0ciq6g.jpg)
 
 
 ### 参考文献
